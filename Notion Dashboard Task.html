@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日主線｜Yuan OS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #666;
+    --accent: #c8a96e;
+    --accent-dim: rgba(200, 169, 110, 0.12);
+    --done: #3a3a3a;
+    --done-text: #555;
+    --red: #e05c5c;
+    --yellow: #d4a843;
+    --green: #5cb87a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 32px 24px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 28px;
+  }
+
+  .date-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  .config-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .config-bar label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .config-bar input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Inter', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .config-bar input:focus {
+    border-color: var(--accent);
+  }
+
+  .config-bar button {
+    margin-top: 10px;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .config-bar button:hover { opacity: 0.85; }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .task-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border: 1px solid transparent;
+  }
+
+  .task-item:hover {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .task-item.done {
+    opacity: 0.4;
+  }
+
+  .task-item.done .task-name {
+    text-decoration: line-through;
+    color: var(--done-text);
+  }
+
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: transparent;
+  }
+
+  .task-item.done .checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .checkbox svg {
+    display: none;
+  }
+
+  .task-item.done .checkbox svg {
+    display: block;
+  }
+
+  .task-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .task-name {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .task-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .task-parent {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .task-parent::before {
+    content: '↑ ';
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .priority-high { background: rgba(224,92,92,0.15); color: var(--red); }
+  .priority-mid  { background: rgba(212,168,67,0.15); color: var(--yellow); }
+  .priority-low  { background: rgba(92,184,122,0.15); color: var(--green); }
+
+  .category {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .empty span {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .error-msg {
+    background: rgba(224,92,92,0.1);
+    border: 1px solid rgba(224,92,92,0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--red);
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .done-section .section-label {
+    margin-top: 4px;
+  }
+
+  .progress-bar-wrap {
+    margin-bottom: 24px;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-text {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="date-label" id="dateLabel"></div>
+  <h1>今日主線任務</h1>
+</header>
+
+<div class="config-bar" id="configBar">
+  <label>Notion API Token</label>
+  <input type="password" id="tokenInput" placeholder="ntn_xxxxxxxxxxxxxxxx" />
+  <button onclick="saveAndLoad()">儲存並載入</button>
+</div>
+
+<div id="errorMsg" class="error-msg" style="display:none"></div>
+
+<div id="progressWrap" class="progress-bar-wrap" style="display:none">
+  <div class="progress-text">
+    <span id="progressLabel">今日進度</span>
+    <span id="progressCount"></span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+</div>
+
+<div id="taskArea">
+  <div class="loading" style="display:none" id="loadingMsg">載入中...</div>
+  <div class="empty" id="emptyMsg" style="display:none">
+    <span>✦</span>
+    還沒有今日主線任務<br>去任務系統勾選「今日主線」來開始
+  </div>
+  <ul class="task-list" id="activeList"></ul>
+
+  <div class="done-section" id="doneSection" style="display:none">
+    <hr class="divider">
+    <div class="section-label">已完成</div>
+    <ul class="task-list" id="doneList"></ul>
+  </div>
+</div>
+
+<script>
+const DB_ID = '6d607d9b-fa03-42d0-99f7-e25d3c5617e7';
+const STORAGE_KEY = 'yuan_os_notion_token';
+
+let tasks = [];
+let parentNames = {};
+
+// Date label
+const now = new Date();
+const weekdays = ['週日','週一','週二','週三','週四','週五','週六'];
+document.getElementById('dateLabel').textContent =
+  `${now.getFullYear()} / ${now.getMonth()+1} / ${now.getDate()}　${weekdays[now.getDay()]}`;
+
+// Load saved token
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved) {
+  document.getElementById('tokenInput').value = saved;
+  document.getElementById('configBar').style.display = 'none';
+  loadTasks(saved);
+}
+
+function saveAndLoad() {
+  const token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+  localStorage.setItem(STORAGE_KEY, token);
+  document.getElementById('configBar').style.display = 'none';
+  loadTasks(token);
+}
+
+async function notionRequest(token, endpoint, body) {
+  const res = await fetch(`https://api.anthropic.com/v1/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      system: `You are a Notion API proxy. The user will give you a Notion API call to make. Call the Notion API and return ONLY the raw JSON response, nothing else. Use token: ${token}`,
+      messages: [{ role: 'user', content: `Make this Notion API call and return only the raw JSON:\nPOST https://api.notion.com/v1/${endpoint}\n${JSON.stringify(body)}` }]
+    })
+  });
+  const data = await res.json();
+  const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
+async function loadTasks(token) {
+  showLoading(true);
+  showError('');
+  try {
+    const res = await fetch('https://api.notion.com/v1/databases/' + DB_ID + '/query', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: {
+          property: '今日主線',
+          checkbox: { equals: true }
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || '無法連接 Notion');
+    }
+
+    const data = await res.json();
+    tasks = data.results || [];
+
+    // Collect parent IDs to fetch names
+    const parentIds = [];
+    tasks.forEach(t => {
+      const parents = t.properties['父任務']?.relation || [];
+      parents.forEach(p => { if (!parentIds.includes(p.id)) parentIds.push(p.id); });
+    });
+
+    // Fetch parent names
+    await Promise.all(parentIds.map(async id => {
+      try {
+        const r = await fetch('https://api.notion.com/v1/pages/' + id, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Notion-Version': '2022-06-28' }
+        });
+        const page = await r.json();
+        parentNames[id] = page.properties?.['任務名稱']?.title?.[0]?.plain_text || '';
+      } catch(e) {}
+    }));
+
+    renderTasks();
+  } catch(e) {
+    showError(e.message || '載入失敗，請確認 Token 是否正確');
+    document.getElementById('configBar').style.display = 'block';
+  }
+  showLoading(false);
+}
+
+function renderTasks() {
+  const active = tasks.filter(t => t.properties['狀態']?.select?.name !== '✅ 完成');
+  const done = tasks.filter(t => t.properties['狀態']?.select?.name === '✅ 完成');
+
+  const activeList = document.getElementById('activeList');
+  const doneList = document.getElementById('doneList');
+  const doneSection = document.getElementById('doneSection');
+  const emptyMsg = document.getElementById('emptyMsg');
+  const progressWrap = document.getElementById('progressWrap');
+
+  activeList.innerHTML = '';
+  doneList.innerHTML = '';
+
+  if (tasks.length === 0) {
+    emptyMsg.style.display = 'block';
+    progressWrap.style.display = 'none';
+    doneSection.style.display = 'none';
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+
+  // Progress
+  const pct = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
+  progressWrap.style.display = 'block';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressCount').textContent = `${done.length} / ${tasks.length}`;
+
+  active.forEach(t => activeList.appendChild(makeTaskEl(t, false)));
+
+  if (done.length > 0) {
+    doneSection.style.display = 'block';
+    done.forEach(t => doneList.appendChild(makeTaskEl(t, true)));
+  } else {
+    doneSection.style.display = 'none';
+  }
+}
+
+function makeTaskEl(task, isDone) {
+  const props = task.properties;
+  const name = props['任務名稱']?.title?.[0]?.plain_text || '（無標題）';
+  const priority = props['優先度']?.select?.name || '';
+  const category = props['分類']?.select?.name || '';
+  const parentRels = props['父任務']?.relation || [];
+  const parentName = parentRels.length > 0 ? parentNames[parentRels[0].id] : '';
+
+  const li = document.createElement('li');
+  li.className = 'task-item' + (isDone ? ' done' : '');
+  li.onclick = () => toggleDone(task, isDone);
+
+  const priorityClass = priority.includes('高') ? 'priority-high' :
+                        priority.includes('中') ? 'priority-mid' : 'priority-low';
+
+  li.innerHTML = `
+    <div class="checkbox">
+      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+        <path d="M1 4L3.5 6.5L9 1" stroke="#0f0f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="task-body">
+      <div class="task-name">${name}</div>
+      <div class="task-meta">
+        ${parentName ? `<span class="task-parent">${parentName}</span>` : ''}
+        ${priority ? `<span class="badge ${priorityClass}">${priority.replace(/🔴|🟡|🟢/g,'').trim()}</span>` : ''}
+        ${category ? `<span class="category">${category}</span>` : ''}
+      </div>
+    </div>
+  `;
+  return li;
+}
+
+async function toggleDone(task, isDone) {
+  const token = localStorage.getItem(STORAGE_KEY);
+  if (!token) return;
+
+  const newStatus = isDone ? '🔄 進行中' : '✅ 完成';
+
+  try {
+    await fetch('https://api.notion.com/v1/pages/' + task.id, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        properties: {
+          '狀態': { select: { name: newStatus } }
+        }
+      })
+    });
+
+    // Update local state
+    task.properties['狀態'] = { select: { name: newStatus } };
+    renderTasks();
+  } catch(e) {
+    showError('更新失敗：' + e.message);
+  }
+}
+
+function showLoading(show) {
+  document.getElementById('loadingMsg').style.display = show ? 'block' : 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+</script>
+</body>
+</html>
