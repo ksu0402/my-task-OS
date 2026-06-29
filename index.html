@@ -354,50 +354,44 @@ function saveAndLoad() {
   loadTasks(token);
 }
 
-async function notionRequest(token, endpoint, body) {
-  const res = await fetch(`https://api.anthropic.com/v1/messages`, {
+async function notionViaAI(token, method, endpoint, body) {
+  const bodyStr = body ? JSON.stringify(body) : 'none';
+  const prompt = `Call the Notion API with these exact parameters and return ONLY the raw JSON response with no explanation, no markdown, no backticks:
+Method: ${method}
+URL: https://api.notion.com/v1/${endpoint}
+Headers: Authorization: Bearer ${token}, Notion-Version: 2022-06-28, Content-Type: application/json
+Body: ${bodyStr}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
-      system: `You are a Notion API proxy. The user will give you a Notion API call to make. Call the Notion API and return ONLY the raw JSON response, nothing else. Use token: ${token}`,
-      messages: [{ role: 'user', content: `Make this Notion API call and return only the raw JSON:\nPOST https://api.notion.com/v1/${endpoint}\n${JSON.stringify(body)}` }]
+      max_tokens: 4000,
+      system: 'You are a Notion API proxy. When given API call instructions, execute them and return ONLY the raw JSON response. No explanation, no markdown formatting, no code blocks. Just the JSON.',
+      messages: [{ role: 'user', content: prompt }]
     })
   });
+
   const data = await res.json();
   const text = data.content?.find(b => b.type === 'text')?.text || '{}';
-  return JSON.parse(text.replace(/```json|```/g, '').trim());
+  const clean = text.replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim();
+  return JSON.parse(clean);
 }
 
 async function loadTasks(token) {
   showLoading(true);
   showError('');
   try {
-    const res = await fetch('https://api.notion.com/v1/databases/' + DB_ID + '/query', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: {
-          property: '今日主線',
-          checkbox: { equals: true }
-        }
-      })
+    const data = await notionViaAI(token, 'POST', 'databases/' + DB_ID + '/query', {
+      filter: { property: '今日主線', checkbox: { equals: true } }
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || '無法連接 Notion');
-    }
+    if (data.object === 'error') throw new Error(data.message || '無法連接 Notion');
 
-    const data = await res.json();
     tasks = data.results || [];
 
-    // Collect parent IDs to fetch names
+    // Collect parent IDs
     const parentIds = [];
     tasks.forEach(t => {
       const parents = t.properties['父任務']?.relation || [];
@@ -407,10 +401,7 @@ async function loadTasks(token) {
     // Fetch parent names
     await Promise.all(parentIds.map(async id => {
       try {
-        const r = await fetch('https://api.notion.com/v1/pages/' + id, {
-          headers: { 'Authorization': 'Bearer ' + token, 'Notion-Version': '2022-06-28' }
-        });
-        const page = await r.json();
+        const page = await notionViaAI(token, 'GET', 'pages/' + id, null);
         parentNames[id] = page.properties?.['任務名稱']?.title?.[0]?.plain_text || '';
       } catch(e) {}
     }));
@@ -501,18 +492,8 @@ async function toggleDone(task, isDone) {
   const newStatus = isDone ? '🔄 進行中' : '✅ 完成';
 
   try {
-    await fetch('https://api.notion.com/v1/pages/' + task.id, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        properties: {
-          '狀態': { select: { name: newStatus } }
-        }
-      })
+    await notionViaAI(token, 'PATCH', 'pages/' + task.id, {
+      properties: { '狀態': { select: { name: newStatus } } }
     });
 
     // Update local state
